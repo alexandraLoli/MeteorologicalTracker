@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { Auth, authState } from '@angular/fire/auth';
 
 @Component({
   selector: 'app-root',
