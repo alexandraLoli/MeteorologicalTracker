@@ -2,6 +2,7 @@
     <div>
         <input type="email" [(ngModel)]="email" placeholder="Enter your email">
         <input type="password" [(ngModel)]="password" placeholder="Enter your password">
+        <button (click)="signInWithGoogle()">Login with Google</button>
         <button (click)="signIn()">Login</button>
     </div>
 </main>

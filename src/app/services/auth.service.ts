@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, UserCredential } from '@angular/fire/auth';
+import { signInWithPopup, GoogleAuthProvider, User } from '@angular/fire/auth';
+
 
 @Injectable({
     providedIn: 'root'  // This makes the service globally available    
@@ -14,8 +16,21 @@ export class AuthService {
     }
   
     // Sign in existing users
+
     signIn(email: string, password: string): Promise<UserCredential> {
       return signInWithEmailAndPassword(this.auth, email, password);
+    }
+
+    async signInWithGoogle(): Promise<User | null> {
+      const provider = new GoogleAuthProvider();
+      try {
+        const result = await signInWithPopup(this.auth, provider);
+        console.log('Google Login Successful:', result.user);
+        return result.user;
+      } catch (error) {
+        console.error('Google Login Failed:', error);
+        return null;
+      }
     }
   
     // Sign out the current user

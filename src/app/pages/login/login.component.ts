@@ -28,4 +28,15 @@ export class LoginComponent {
           console.error('Login Failed', error);
         });
     }
+
+    signInWithGoogle() {
+      this.authService.signInWithGoogle().then(user => {
+        if (user) {
+          console.log('User Logged In:', user);
+        } else {
+          console.log('Login failed or canceled.');
+        }
+      });
+    }
+
   }
