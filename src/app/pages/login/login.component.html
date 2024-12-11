@@ -1,8 +1,10 @@
 <main class="main">
-    <div>
-        <input type="email" [(ngModel)]="email" placeholder="Enter your email">
-        <input type="password" [(ngModel)]="password" placeholder="Enter your password">
-        <button (click)="signInWithGoogle()">Login with Google</button>
-        <button (click)="signIn()">Login</button>
+    <h1 class="page-header">Meteorological Traker</h1>
+    <div class="login-container">
+        <h2 class="login-header">Sign In</h2>
+        <input type="email" [(ngModel)]="email" placeholder="Enter your email" class="input-email">
+        <input type="password" [(ngModel)]="password" placeholder="Enter your password" class="input-email">
+        <button (click)="signIn()" class="email-authenticator">Login</button>
+        <button (click)="signInWithGoogle()" class="google-authenticator">Login with Google </button>
     </div>
 </main>
