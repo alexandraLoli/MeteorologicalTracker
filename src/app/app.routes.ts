@@ -1,11 +1,23 @@
 import { Routes } from '@angular/router';
-import { NgModule } from '@angular/core';
 import { LoginComponent } from './pages/login/login.component';
-import { AppComponent } from "./app.component"
+import { EsriMapComponent } from './pages/esri-map/esri-map.component'; // Asigură-te că MapComponent este creat
 
 export const routes: Routes = [
-    {
-        path: '',
-        component: LoginComponent
-    }
-  ];
+  {
+    path: '', // Ruta implicită redirecționează către login
+    redirectTo: '/login',
+    pathMatch: 'full'
+  },
+  {
+    path: 'login', // Pagina de login
+    component: LoginComponent
+  },
+  {
+    path: 'map', // Pagina cu harta
+    component: EsriMapComponent
+  },
+  {
+    path: '**', // Orice altă rută redirecționează la login
+    redirectTo: '/login'
+  }
+];
