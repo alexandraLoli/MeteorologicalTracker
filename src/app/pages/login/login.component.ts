@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
-import { RouterOutlet } from '@angular/router';
+import { Router } from '@angular/router';
 
 @Component({
     selector: 'app-login',
@@ -14,7 +14,7 @@ export class LoginComponent {
     email: string;
     password: string;
   
-    constructor(private authService: AuthService) {
+    constructor(private authService: AuthService, private router: Router) {
       this.email = "";
       this.password = "";
     }
@@ -23,6 +23,7 @@ export class LoginComponent {
       this.authService.signIn(this.email, this.password)
         .then(result => {
           console.log('Login Successful', result);
+          this.router.navigate(['/map']); // Redirecționează la pagina hărții
         })
         .catch(error => {
           console.error('Login Failed', error);
@@ -30,13 +31,19 @@ export class LoginComponent {
     }
 
     signInWithGoogle() {
-      this.authService.signInWithGoogle().then(user => {
-        if (user) {
-          console.log('User Logged In:', user);
-        } else {
-          console.log('Login failed or canceled.');
-        }
-      });
+      this.authService.signInWithGoogle()
+        .then(user => {
+          if (user) {
+            console.log('Google Login Successful:', user);
+            this.router.navigate(['/map']); // Redirecționează la pagina hărții
+          } else {
+            console.error('Google Login Failed or canceled.');
+          }
+        })
+        .catch(error => {
+          console.error('Error during Google Login:', error);
+        });
     }
+    
 
   }
