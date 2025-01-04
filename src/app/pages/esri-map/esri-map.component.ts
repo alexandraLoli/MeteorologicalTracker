@@ -7,12 +7,14 @@
       EventEmitter,
       OnDestroy
     } from "@angular/core";
-    
+
     import esri = __esri; // Esri TypeScript Types
     
     import Config from '@arcgis/core/config';
     import WebMap from '@arcgis/core/WebMap';
     import MapView from '@arcgis/core/views/MapView';
+    
+    import Search from "@arcgis/core/widgets/Search";
     
     @Component({
       selector: "app-esri-map",
@@ -33,7 +35,7 @@
 
     
       zoom = 10;
-      center: Array<number> = [-118.73682450024377, 34.07817583063242];
+      center: Array<number> = [26.05682450024377, 44.43817583063242];
       basemap = "streets-vector";
       loaded = false;
       directionsElement: any;
@@ -72,6 +74,7 @@
           await this.view.when();
           console.log("ArcGIS map loaded");
           // this.addRouting();
+          this.addSearchWidget();
           return this.view;
         } catch (error) {
           console.error("Error loading the map: ", error);
@@ -79,6 +82,13 @@
           return null;
         }
       }
+
+      addSearchWidget() {
+        const searchWidget = new Search({
+            view: this.view
+        });
+        this.view.ui.add(searchWidget, "top-right");
+    }
 
       ngOnDestroy() {
           if (this.view) {
