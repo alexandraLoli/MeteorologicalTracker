@@ -5,14 +5,18 @@
       ElementRef,
       Output,
       EventEmitter,
+      NgModule,
       OnDestroy
     } from "@angular/core";
+
+
 
     import esri = __esri; // Esri TypeScript Types
     
     import Config from '@arcgis/core/config';
     import WebMap from '@arcgis/core/WebMap';
     import MapView from '@arcgis/core/views/MapView';
+    import { CommonModule } from '@angular/common';
     
     import Search from "@arcgis/core/widgets/Search";
     
@@ -21,6 +25,7 @@
       templateUrl: "./esri-map.component.html",
       styleUrls: ["./esri-map.component.scss"]
     })
+
     export class EsriMapComponent implements OnInit, OnDestroy {
       @Output() mapLoadedEvent = new EventEmitter<boolean>();
     
@@ -39,6 +44,7 @@
       basemap = "streets-vector";
       loaded = false;
       directionsElement: any;
+      showForm: boolean = false;
     
       constructor() { }
     
@@ -49,6 +55,16 @@
         });
       }
     
+      toggleForm() { 
+        this.showForm = !this.showForm;
+        const divForm = document.querySelector(".incident-form") as HTMLElement;
+        const overlay = document.querySelector(".overlay") as HTMLElement;
+        if (divForm && overlay) {
+          divForm.style.display = this.showForm ? "block" : "none";
+          overlay.style.display = this.showForm ? "block" : "none";
+        }
+        console.log(this.showForm);
+      }
       async initializeMap() {
         try {
           Config.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurJslmK0OQqJ65Xkr2heL5V2iqhPRl1gkDz_KUVf39ij7ktHW_1qHKpSaAHtODrSnSX4KIuar88YsxR-5bQ0iPjtI6cfgypohkTIE-k0f0fUYkmQkeFTVWQ_5Rf_hM_zATGo0Rbibw3FiGkKBXy5OOF0qRw_VRkJ8ScfyCPOPAAp2rGmJje7fKR5MP-P6RGAWE30qzcMwbYajgyL6nRYM1wI.AT1_FakVI4L1";
