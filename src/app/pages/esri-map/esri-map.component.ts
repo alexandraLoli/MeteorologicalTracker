@@ -5,7 +5,6 @@
       ElementRef,
       Output,
       EventEmitter,
-      NgModule,
       OnDestroy
     } from "@angular/core";
 
@@ -16,10 +15,19 @@
     import Config from '@arcgis/core/config';
     import WebMap from '@arcgis/core/WebMap';
     import MapView from '@arcgis/core/views/MapView';
-    import { CommonModule } from '@angular/common';
+
+    import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+    import Graphic from '@arcgis/core/Graphic';
+    import Point from '@arcgis/core/geometry/Point';
+
+    import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
+    import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
     
     import Search from "@arcgis/core/widgets/Search";
-import { timestamp } from "rxjs";
+    import { timestamp } from "rxjs";
+
+    import RouteParameters from '@arcgis/core/rest/support/RouteParameters';
+    import * as route from "@arcgis/core/rest/route.js";
     
     @Component({
       selector: "app-esri-map",
@@ -114,7 +122,7 @@ import { timestamp } from "rxjs";
         // TODO - adauga obiectul incident in baza de date
       }
 
-      
+
       async initializeMap() {
         try {
           Config.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurJslmK0OQqJ65Xkr2heL5V2iqhPRl1gkDz_KUVf39ij7ktHW_1qHKpSaAHtODrSnSX4KIuar88YsxR-5bQ0iPjtI6cfgypohkTIE-k0f0fUYkmQkeFTVWQ_5Rf_hM_zATGo0Rbibw3FiGkKBXy5OOF0qRw_VRkJ8ScfyCPOPAAp2rGmJje7fKR5MP-P6RGAWE30qzcMwbYajgyL6nRYM1wI.AT1_FakVI4L1";
@@ -124,6 +132,9 @@ import { timestamp } from "rxjs";
           };
           this.map = new WebMap(mapProperties);
     
+          this.addFeatureLayers();
+          this.addGraphicsLayer();
+
           const mapViewProperties = {
             container: this.mapViewEl.nativeElement,
             center: this.center,
@@ -139,7 +150,7 @@ import { timestamp } from "rxjs";
     
           await this.view.when();
           console.log("ArcGIS map loaded");
-          // this.addRouting();
+          this.addRouting();
           this.addSearchWidget();
           return this.view;
         } catch (error) {
@@ -155,6 +166,151 @@ import { timestamp } from "rxjs";
         });
         this.view.ui.add(searchWidget, "top-right");
     }
+
+    addFeatureLayers() {
+      this.trailheadsLayer = new FeatureLayer({
+        url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trailheads/FeatureServer/0",
+        outFields: ['*']
+      });
+      this.map.add(this.trailheadsLayer);
+  
+      const trailsLayer = new FeatureLayer({
+        url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trails/FeatureServer/0"
+      });
+      this.map.add(trailsLayer, 0);
+  
+      const parksLayer = new FeatureLayer({
+        url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Parks_and_Open_Space/FeatureServer/0"
+      });
+      this.map.add(parksLayer, 0);
+  
+      console.log("Feature layers added");
+    }
+  
+    addGraphicsLayer() {
+      this.graphicsLayer = new GraphicsLayer();
+      this.map.add(this.graphicsLayer);
+      this.graphicsLayerUserPoints = new GraphicsLayer();
+      this.map.add(this.graphicsLayerUserPoints);
+      this.graphicsLayerRoutes = new GraphicsLayer();
+      this.map.add(this.graphicsLayerRoutes);
+    }
+
+    addRouting() {
+      const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
+      this.view.on("click", (event) => {
+        this.view.hitTest(event).then((elem: esri.HitTestResult) => {
+          if (elem && elem.results && elem.results.length > 0) {
+            let point: esri.Point | undefined = elem.results.find(e => e.layer === this.trailheadsLayer)?.mapPoint;
+            if (point) {
+              console.log("get selected point: ", elem, point);
+              if (this.graphicsLayerUserPoints.graphics.length === 0) {
+                this.addPoint(point.latitude, point.longitude);
+              } else if (this.graphicsLayerUserPoints.graphics.length === 1) {
+                this.addPoint(point.latitude, point.longitude);
+                this.calculateRoute(routeUrl);
+              } else {
+                this.removePoints();
+              }
+            }
+          }
+        });
+      });
+    }
+
+    addPoint(lat: number, lng: number) {
+      let point = new Point({
+        longitude: lng,
+        latitude: lat
+      });
+  
+      const simpleMarkerSymbol = {
+        type: "simple-marker",
+        color: [226, 119, 40],  // Orange
+        outline: {
+          color: [255, 255, 255], // White
+          width: 1
+        }
+      };
+  
+      let pointGraphic: esri.Graphic = new Graphic({
+        geometry: point,
+        symbol: simpleMarkerSymbol
+      });
+  
+      this.graphicsLayerUserPoints.add(pointGraphic);
+    }
+  
+    removePoints() {
+      this.graphicsLayerUserPoints.removeAll();
+    }
+  
+    removeRoutes() {
+      this.graphicsLayerRoutes.removeAll();
+    }
+  
+    async calculateRoute(routeUrl: string) {
+      const routeParams = new RouteParameters({
+        stops: new FeatureSet({
+          features: this.graphicsLayerUserPoints.graphics.toArray()
+        }),
+        returnDirections: true
+      });
+  
+      try {
+        const data = await route.solve(routeUrl, routeParams);
+        this.displayRoute(data);
+      } catch (error) {
+        console.error("Error calculating route: ", error);
+        alert("Error calculating route");
+      }
+    }
+  
+    displayRoute(data: any) {
+      for (const result of data.routeResults) {
+        result.route.symbol = {
+          type: "simple-line",
+          color: [5, 150, 255],
+          width: 3
+        };
+        this.graphicsLayerRoutes.graphics.add(result.route);
+      }
+      if (data.routeResults.length > 0) {
+        this.showDirections(data.routeResults[0].directions.features);
+      } else {
+        alert("No directions found");
+      }
+    }
+  
+    clearRouter() {
+      if (this.view) {
+        // Remove all graphics related to routes
+        this.removeRoutes();
+        this.removePoints();
+        console.log("Route cleared");
+        this.view.ui.remove(this.directionsElement);
+        this.view.ui.empty("top-right");
+        console.log("Directions cleared");
+      }
+    }
+  
+    showDirections(features: any[]) {
+      this.directionsElement = document.createElement("ol");
+      this.directionsElement.classList.add("esri-widget", "esri-widget--panel", "esri-directions__scroller");
+      this.directionsElement.style.marginTop = "0";
+      this.directionsElement.style.padding = "15px 15px 15px 30px";
+  
+      features.forEach((result, i) => {
+        const direction = document.createElement("li");
+        direction.innerHTML = `${result.attributes.text} (${result.attributes.length} miles)`;
+        this.directionsElement.appendChild(direction);
+      });
+  
+      this.view.ui.empty("top-right");
+      this.view.ui.add(this.directionsElement, "top-right");
+    }
+
+
 
       ngOnDestroy() {
           if (this.view) {
