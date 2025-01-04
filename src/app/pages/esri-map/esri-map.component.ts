@@ -19,6 +19,7 @@
     import { CommonModule } from '@angular/common';
     
     import Search from "@arcgis/core/widgets/Search";
+import { timestamp } from "rxjs";
     
     @Component({
       selector: "app-esri-map",
@@ -64,6 +65,47 @@
           overlay.style.display = this.showForm ? "block" : "none";
         }
         console.log(this.showForm);
+      }
+
+      submitForm() {
+        const incidentName = (document.getElementById("name") as HTMLInputElement)?.value;
+        const incidentTemperature = (document.getElementById("temperature") as HTMLInputElement)?.value;
+        const incidentHumidity = (document.getElementById("humidity") as HTMLInputElement)?.value;
+        const incidentWindSpeed= (document.getElementById("wind_speed") as HTMLInputElement)?.value;
+        const incidentConditions= (document.getElementById("conditions") as HTMLSelectElement)?.value;
+        const incidentType= (document.getElementById("type") as HTMLSelectElement)?.value;
+        const incidentSeverity= (document.getElementById("severity") as HTMLSelectElement)?.value;
+        const incidentDescription= (document.getElementById("description") as HTMLTextAreaElement)?.value;
+
+        // TODO - a se lua informatiile din localizarea persoanei
+        const location = {
+          latitude: 0,
+          longitude: 0,
+          description: "ceva, ceva"
+        }
+
+        const weather_conditions = {
+          temperature: incidentTemperature,
+          humidity: incidentHumidity,
+          wind_speed: incidentWindSpeed,
+          conditions: incidentConditions
+        }
+
+        const incident_details = {
+          type: incidentType,
+          severity: incidentSeverity,
+          description: incidentDescription
+        }
+
+        const incident = {
+          name: incidentName,
+          timestamp: new Date().toISOString,
+          location: location,
+          weather_conditions: weather_conditions,
+          incident_details: incident_details
+        }
+
+        // TODO - adauga obiectul incident in baza de date
       }
       async initializeMap() {
         try {

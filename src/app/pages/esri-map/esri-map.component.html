@@ -23,6 +23,18 @@
                 <label for="wind_speed">Wind Speed (km/h):</label>
                 <input type="number" id="wind_speed" name="wind_speed" step="0.1" required>
 
+                <label for="conditions">Weather Conditions:</label>
+                <select id="conditions" name="conditions" required>
+                <option value="" disabled selected>Select an option</option>
+                <option value="Sunny">Sunny</option>
+                <option value="Partly Cloudy">Partly Cloudy</option>
+                <option value="Cloudy">Cloudy</option>
+                <option value="Light Rain">Light Rain</option>
+                <option value="Heavy Rain">Heavy Rain</option>
+                <option value="Foggy:">Foggy:</option>
+                <option value="Snow">Snow</option>
+                </select>
+
                 <label for="type">Type of Incident:</label>
                 <select id="type" name="type" required>
                 <option value="" disabled selected>Select an option</option>
@@ -56,7 +68,7 @@
                 <label for="description">Description:</label>
                 <textarea id="description" name="description" rows="4" required placeholder="Describe the incident"></textarea>
 
-                <button type="submit">Submit</button>
+                <button type="submit" (click)="submitForm()">Submit</button>
             </form>
         </div>
     </div>
