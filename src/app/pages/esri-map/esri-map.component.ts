@@ -67,7 +67,11 @@ import { timestamp } from "rxjs";
         console.log(this.showForm);
       }
 
-      submitForm() {
+      // Functie care ia datele din formular
+      submitForm(event: Event) {
+
+        event.preventDefault();
+
         const incidentName = (document.getElementById("name") as HTMLInputElement)?.value;
         const incidentTemperature = (document.getElementById("temperature") as HTMLInputElement)?.value;
         const incidentHumidity = (document.getElementById("humidity") as HTMLInputElement)?.value;
@@ -99,14 +103,18 @@ import { timestamp } from "rxjs";
 
         const incident = {
           name: incidentName,
-          timestamp: new Date().toISOString,
+          timestamp: new Date().toISOString(),
           location: location,
           weather_conditions: weather_conditions,
           incident_details: incident_details
         }
 
+        console.log(incident);
+
         // TODO - adauga obiectul incident in baza de date
       }
+
+      
       async initializeMap() {
         try {
           Config.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurJslmK0OQqJ65Xkr2heL5V2iqhPRl1gkDz_KUVf39ij7ktHW_1qHKpSaAHtODrSnSX4KIuar88YsxR-5bQ0iPjtI6cfgypohkTIE-k0f0fUYkmQkeFTVWQ_5Rf_hM_zATGo0Rbibw3FiGkKBXy5OOF0qRw_VRkJ8ScfyCPOPAAp2rGmJje7fKR5MP-P6RGAWE30qzcMwbYajgyL6nRYM1wI.AT1_FakVI4L1";

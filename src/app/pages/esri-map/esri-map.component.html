@@ -10,7 +10,7 @@
         <div class="incident-form">
             <h1>Report an incident</h1>
             <h5>Make a difference—help others today!</h5>
-            <form>
+            <form (submit)="submitForm($event)">
                 <label for="name">Name of the incident:</label>
                 <input type="text" id="name" name="name" placeholder="Tell us what happened" required>
 
@@ -68,7 +68,7 @@
                 <label for="description">Description:</label>
                 <textarea id="description" name="description" rows="4" required placeholder="Describe the incident"></textarea>
 
-                <button type="submit" (click)="submitForm()">Submit</button>
+                <button type="submit">Submit</button>
             </form>
         </div>
     </div>
