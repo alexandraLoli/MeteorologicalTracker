@@ -8,13 +8,12 @@
       OnDestroy
     } from "@angular/core";
 
-
-
     import esri = __esri; // Esri TypeScript Types
     
     import Config from '@arcgis/core/config';
     import WebMap from '@arcgis/core/WebMap';
     import MapView from '@arcgis/core/views/MapView';
+    import Locate from '@arcgis/core/widgets/Locate';
 
     import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
     import Graphic from '@arcgis/core/Graphic';
@@ -28,6 +27,12 @@
 
     import RouteParameters from '@arcgis/core/rest/support/RouteParameters';
     import * as route from "@arcgis/core/rest/route.js";
+    import { Database, list, push } from '@angular/fire/database';
+
+    import { WeatherResponse, Bulk, Location, Current, Condition, Query} from "../../services/weather.service";
+
+    import { WeatherService } from '../../services/weather.service';
+    import { ref } from "firebase/database";
     
     @Component({
       selector: "app-esri-map",
@@ -40,28 +45,29 @@
     
       @ViewChild("mapViewNode", { static: true }) private mapViewEl!: ElementRef;
 
+      public weatherData!: WeatherResponse;
       map!: esri.Map;
       view!: esri.MapView;
       graphicsLayer!: esri.GraphicsLayer;
       graphicsLayerUserPoints!: esri.GraphicsLayer;
       graphicsLayerRoutes!: esri.GraphicsLayer;
       trailheadsLayer!: esri.FeatureLayer;
-
     
-      zoom = 10;
-      center: Array<number> = [26.05682450024377, 44.43817583063242];
+      zoom = 6;
+      center: Array<number> = [25.3333, 45.75];
       basemap = "streets-vector";
       loaded = false;
       directionsElement: any;
       showForm: boolean = false;
     
-      constructor() { }
+      constructor(private weatherService: WeatherService, private db: Database) { }
     
       ngOnInit() {
         this.initializeMap().then(() => {
           this.loaded = this.view.ready;
           this.mapLoadedEvent.emit(true);
         });
+        this.getWeather();
       }
     
       toggleForm() { 
@@ -89,39 +95,49 @@
         const incidentSeverity= (document.getElementById("severity") as HTMLSelectElement)?.value;
         const incidentDescription= (document.getElementById("description") as HTMLTextAreaElement)?.value;
 
-        // TODO - a se lua informatiile din localizarea persoanei
-        const location = {
-          latitude: 0,
-          longitude: 0,
-          description: "ceva, ceva"
-        }
 
-        const weather_conditions = {
-          temperature: incidentTemperature,
-          humidity: incidentHumidity,
-          wind_speed: incidentWindSpeed,
-          conditions: incidentConditions
-        }
+        const locateWidget = new Locate({
+          view: this.view,
+          goToOverride: (view, options) => { },
+        });
+        
+        locateWidget.locate().then((result) => {
+          const { latitude, longitude } = result.coords;
+          const location = {
+            latitude: latitude,
+            longitude: longitude
+          }
 
-        const incident_details = {
-          type: incidentType,
-          severity: incidentSeverity,
-          description: incidentDescription
-        }
+          const weather_conditions = {
+            temperature: incidentTemperature,
+            humidity: incidentHumidity,
+            wind_speed: incidentWindSpeed,
+            conditions: incidentConditions
+          }
+  
+          const incident_details = {
+            type: incidentType,
+            severity: incidentSeverity,
+            description: incidentDescription
+          }
+  
+          const incident = {
+            name: incidentName,
+            timestamp: new Date().toISOString(),
+            location: location,
+            weather_conditions: weather_conditions,
+            incident_details: incident_details
+          }
+  
+          console.log(incident);
+          this.addIncident(incident)
 
-        const incident = {
-          name: incidentName,
-          timestamp: new Date().toISOString(),
-          location: location,
-          weather_conditions: weather_conditions,
-          incident_details: incident_details
-        }
+        })
+        .catch((error) => {
+          console.error('Error getting location:', error);
+        });
 
-        console.log(incident);
-
-        // TODO - adauga obiectul incident in baza de date
       }
-
 
       async initializeMap() {
         try {
@@ -150,7 +166,7 @@
     
           await this.view.when();
           console.log("ArcGIS map loaded");
-          this.addRouting();
+          // this.addRouting();
           this.addSearchWidget();
           return this.view;
         } catch (error) {
@@ -196,27 +212,105 @@
       this.map.add(this.graphicsLayerRoutes);
     }
 
-    addRouting() {
-      const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
-      this.view.on("click", (event) => {
-        this.view.hitTest(event).then((elem: esri.HitTestResult) => {
-          if (elem && elem.results && elem.results.length > 0) {
-            let point: esri.Point | undefined = elem.results.find(e => e.layer === this.trailheadsLayer)?.mapPoint;
-            if (point) {
-              console.log("get selected point: ", elem, point);
-              if (this.graphicsLayerUserPoints.graphics.length === 0) {
-                this.addPoint(point.latitude, point.longitude);
-              } else if (this.graphicsLayerUserPoints.graphics.length === 1) {
-                this.addPoint(point.latitude, point.longitude);
-                this.calculateRoute(routeUrl);
-              } else {
-                this.removePoints();
-              }
-            }
-          }
-        });
+    addWeatherLocations() {
+    this.weatherData.bulk.map((item: Bulk) => {
+      let point = new Point({
+        longitude: item.query.location.lon,
+        latitude: item.query.location.lat
       });
-    }
+  
+    const simpleMarkerSymbol = {
+      type: "simple-marker",
+      color: [0, 0, 0],  // Orange
+      outline: {
+        color: [255, 255, 255], // White
+        width: 2
+      }
+    };
+  
+    const pointGraphic: esri.Graphic = new Graphic({
+      geometry: point,
+      symbol: simpleMarkerSymbol,
+      attributes: {
+        LocationName: item.query.location.name,
+        Temperature: item.query.current.temp_c + " °C", 
+        Conditions: item.query.current.condition.text,
+        WindSpeed: item.query.current.wind_kph + " km/h",
+        WindDirection: item.query.current.wind_dir,
+        Humidity: item.query.current.humidity + " %"
+      },
+      popupTemplate: {
+        title: "{LocationName}",
+        content: [
+          {
+            type: "media", // Define a media content block
+            mediaInfos: [
+              {
+                title: item.query.current.condition.text,
+                type: "image",
+                value: {
+                  sourceURL: "https:" + item.query.current.condition.icon
+                },
+              }
+            ]
+          },
+          {
+            type: "fields",
+            fieldInfos: [
+              {
+                fieldName: "Temperature",
+                label: "Temperature",
+                visible: true,
+                format: {
+                  places: 1,
+                  digitSeparator: true
+                }
+              },
+              {
+                fieldName: "Humidity", // The field in the dataset for humidity
+                label: "Humidity",
+                visible: true
+              },
+              {
+                fieldName: "WindSpeed",
+                label: "Wind Speed",
+                visible: true
+              },
+              {
+                fieldName: "WindDirection",
+                label: "Wind Direction",
+                visible: true
+              }
+            ]
+          }
+        ]
+      }
+    });
+    this.graphicsLayerUserPoints.add(pointGraphic);
+  });
+}
+
+    // addRouting() {
+    //   const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
+    //   this.view.on("click", (event) => {
+    //     this.view.hitTest(event).then((elem: esri.HitTestResult) => {
+    //       if (elem && elem.results && elem.results.length > 0) {
+    //         let point: esri.Point | undefined = elem.results.find(e => e.layer === this.trailheadsLayer)?.mapPoint;
+    //         if (point) {
+    //           console.log("get selected point: ", elem, point);
+    //           if (this.graphicsLayerUserPoints.graphics.length === 0) {
+    //             this.addPoint(point.latitude, point.longitude);
+    //           } else if (this.graphicsLayerUserPoints.graphics.length === 1) {
+    //             this.addPoint(point.latitude, point.longitude);
+    //             this.calculateRoute(routeUrl);
+    //           } else {
+    //             this.removePoints();
+    //           }
+    //         }
+    //       }
+    //     });
+    //   });
+    // }
 
     addPoint(lat: number, lng: number) {
       let point = new Point({
@@ -310,7 +404,28 @@
       this.view.ui.add(this.directionsElement, "top-right");
     }
 
+    getWeather(): void {
+      const locations = ['Bucharest', 'Timisoara', 'Oradea', 'Craiova', 'Brasov', 'Sibiu', 'Iasi', 'Constanta', 'Galati', 'Cluj-Napoca', 'Baia Mare', 'Bacau', 'Pitesti', 'Targu Mures', 'Suceava', 'Miercurea Ciuc', 'Arad'];
+      this.weatherService.getCitiesWeather(locations).subscribe({
+        next: (data) => {
+          this.weatherData = data;
+          this.addWeatherLocations()
+          console.log(this.weatherData);
+        },
+        error: (error) => {
+          console.error('There was an error with Weather API Service', error);
+        }
+      });
+    }
 
+    addIncident(incident: any) {
+      const itemsRef = ref(this.db, 'incidents');
+      push(itemsRef, incident).then(() => {
+        console.log('Incident added!');
+      }).catch((error) => {
+        console.error('Error adding incident: ', error);
+      });
+    }
 
       ngOnDestroy() {
           if (this.view) {
