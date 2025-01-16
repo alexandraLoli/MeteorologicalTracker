@@ -50,7 +50,8 @@ export class EsriMapComponent implements OnInit, OnDestroy {
   map!: esri.Map;
   view!: esri.MapView;
   graphicsLayer!: esri.GraphicsLayer;
-  graphicsLayerUserPoints!: esri.GraphicsLayer;
+  graphicsLayerUserWeather!: esri.GraphicsLayer;
+  graphicsLayerUserIncidents!: esri.GraphicsLayer;
   graphicsLayerRoutes!: esri.GraphicsLayer;
   trailheadsLayer!: esri.FeatureLayer;
 
@@ -68,8 +69,8 @@ export class EsriMapComponent implements OnInit, OnDestroy {
       this.loaded = this.view.ready;
       this.mapLoadedEvent.emit(true);
     });
-    this.getWeather();
     this.getIncidents();
+    this.getWeather();
   }
 
   toggleForm() { 
@@ -132,8 +133,9 @@ export class EsriMapComponent implements OnInit, OnDestroy {
       }
 
       console.log(incident);
-      this.addIncident(incident)
-
+      this.addIncident(incident);
+      const element = (document.querySelector(".incident-form") as HTMLDivElement);
+      element.style.display = 'none'
     })
     .catch((error) => {
       console.error('Error getting location:', error);
@@ -208,8 +210,10 @@ addFeatureLayers() {
 addGraphicsLayer() {
   this.graphicsLayer = new GraphicsLayer();
   this.map.add(this.graphicsLayer);
-  this.graphicsLayerUserPoints = new GraphicsLayer();
-  this.map.add(this.graphicsLayerUserPoints);
+  this.graphicsLayerUserIncidents = new GraphicsLayer();
+  this.map.add(this.graphicsLayerUserIncidents);
+  this.graphicsLayerUserWeather = new GraphicsLayer();
+  this.map.add(this.graphicsLayerUserWeather);
   this.graphicsLayerRoutes = new GraphicsLayer();
   this.map.add(this.graphicsLayerRoutes);
 }
@@ -245,7 +249,7 @@ const pointGraphic: esri.Graphic = new Graphic({
     title: "{LocationName}",
     content: [
       {
-        type: "media", // Define a media content block
+        type: "media",
         mediaInfos: [
           {
             title: item.query.current.condition.text,
@@ -288,7 +292,7 @@ const pointGraphic: esri.Graphic = new Graphic({
     ]
   }
 });
-this.graphicsLayerUserPoints.add(pointGraphic);
+this.graphicsLayerUserWeather.add(pointGraphic);
 });
 }
 
@@ -300,9 +304,9 @@ this.graphicsLayerUserPoints.add(pointGraphic);
 //         let point: esri.Point | undefined = elem.results.find(e => e.layer === this.trailheadsLayer)?.mapPoint;
 //         if (point) {
 //           console.log("get selected point: ", elem, point);
-//           if (this.graphicsLayerUserPoints.graphics.length === 0) {
+//           if (this.graphicsLayerUserWeather.graphics.length === 0) {
 //             this.addPoint(point.latitude, point.longitude);
-//           } else if (this.graphicsLayerUserPoints.graphics.length === 1) {
+//           } else if (this.graphicsLayerUserWeather.graphics.length === 1) {
 //             this.addPoint(point.latitude, point.longitude);
 //             this.calculateRoute(routeUrl);
 //           } else {
@@ -334,11 +338,12 @@ addPoint(lat: number, lng: number) {
     symbol: simpleMarkerSymbol
   });
 
-  this.graphicsLayerUserPoints.add(pointGraphic);
+  this.graphicsLayerUserIncidents.add(pointGraphic);
 }
 
 removePoints() {
-  this.graphicsLayerUserPoints.removeAll();
+  this.graphicsLayerUserWeather.removeAll();
+  this.graphicsLayerUserIncidents.removeAll();
 }
 
 removeRoutes() {
@@ -348,7 +353,7 @@ removeRoutes() {
 async calculateRoute(routeUrl: string) {
   const routeParams = new RouteParameters({
     stops: new FeatureSet({
-      features: this.graphicsLayerUserPoints.graphics.toArray()
+      features: this.graphicsLayerUserWeather.graphics.toArray()
     }),
     returnDirections: true
   });
@@ -480,7 +485,7 @@ displayIncidentsOnMap(incidents: any[]) {
     });
     
 
-    this.graphicsLayerUserPoints.add(graphicWithPopup);
+    this.graphicsLayerUserIncidents.add(graphicWithPopup);
   });
 }
 
